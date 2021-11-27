@@ -36,3 +36,24 @@ resource "aws_security_group" "prod_web" {
     "Terraform" : "true"
   }
 }
+
+resource "aws_instance" "prod_web" {
+  ami = "ami-01b9dc827d1e2d177"
+  instance_type = "t2.nano"
+
+  vpc_security_group_ids = [
+    aws_security_group.prod_web.id
+  ]
+  tags = {
+    "Terraform" : "true"
+  }
+}
+
+resource "aws_eip" "prod_web" {
+  instance = aws_instance.prod_web.id
+
+  tags = {
+    "Terraform" : "true"
+  }
+}
+
