@@ -1,20 +1,14 @@
 variable "whitelist" {
   type = list(string)
+  default = ["0.0.0.0/0"]
 }
-variable "web_image_id" {
+variable "nginx_image_id" {
   type = string
+  default = "ami-01b9dc827d1e2d177"
 }
 variable "web_instance_type" {
   type = string
-}
-variable "web_desired_capacity" {
-  type = number
-}
-variable "web_max_size" {
-  type = number
-}
-variable "web_min_size" {
-  type = number
+  default = "t2.nano"
 }
 
 provider "aws" {
@@ -43,10 +37,8 @@ resource "aws_default_subnet" "default_az2" {
   }
 }
 
-resource "aws_security_group" "prod_web" {
-  name = "prod_web"
-  description = "Allow standard http and https ports inbound and everything outbound"
-
+resource "aws_default_security_group" "default" {
+  vpc_id = aws_default_vpc.default.id
   ingress {
     from_port = 80
     to_port = 80
@@ -63,7 +55,7 @@ resource "aws_security_group" "prod_web" {
     from_port = 0
     to_port   = 0
     protocol  = "-1"
-    cidr_blocks = var.whitelist
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {
@@ -71,52 +63,16 @@ resource "aws_security_group" "prod_web" {
   }
 }
 
-resource "aws_elb" "prod_web" {
-  name = "prod-web"
-  subnets = [aws_default_subnet.default_az1.id, aws_default_subnet.default_az2.id]
-  security_groups = [aws_security_group.prod_web.id]
+module "web_app" {
+  source = "./modules/web_app"
 
-  listener {
-    instance_port = 80
-    instance_protocol = "http"
-    lb_port = 80
-    lb_protocol = "http"
-  }
-  tags = {
-    "Terraform" : "true"
-  }
-}
-
-resource "aws_launch_template" "prod_web" {
-  name_prefix = "prod-web"
-  image_id = var.web_image_id
-  instance_type = var.web_instance_type
-  vpc_security_group_ids = [aws_security_group.prod_web.id]
-  tags = {
-    "Terraform" : "true"
-  }
-}
-
-resource "aws_autoscaling_group" "prod_web" {
-#  availability_zones = ["eu-central-1a","eu-central-1b"]
-  vpc_zone_identifier = [aws_default_subnet.default_az1.id, aws_default_subnet.default_az2.id]
-
-  desired_capacity = var.web_desired_capacity
-  max_size         = var.web_max_size
-  min_size         = var.web_min_size
-
-  launch_template {
-    id = aws_launch_template.prod_web.id
-    version = "$Latest"
-  }
-  tag {
-    key = "Terraform"
-    value = "true"
-    propagate_at_launch = true
-  }
-}
-
-resource "aws_autoscaling_attachment" "prod_web" {
-  autoscaling_group_name = aws_autoscaling_group.prod_web.id
-  elb                    = aws_elb.prod_web.id
+  whitelist            = var.whitelist
+  web_image_id         = var.nginx_image_id
+  web_instance_type    = "t2.micro"
+  web_desired_capacity = 2
+  web_max_size         = 2
+  web_min_size         = 1
+  subnets              = [aws_default_subnet.default_az1.id, aws_default_subnet.default_az2.id]
+  security_groups      = [aws_default_security_group.default.id]
+  web_app              = "prod"
 }

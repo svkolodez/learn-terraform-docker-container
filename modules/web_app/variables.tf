@@ -22,4 +22,6 @@ variable "subnets" {
 variable "security_groups" {
   type = list(string)
 }
-
+variable "web_app" {
+  type = string
+}

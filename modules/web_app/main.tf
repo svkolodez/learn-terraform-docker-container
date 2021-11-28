@@ -1,6 +1,6 @@
 
 resource "aws_elb" "this" {
-  name = "${web_app}-web"
+  name = "${var.web_app}-web"
   subnets = var.subnets
   security_groups = var.security_groups
 
@@ -16,7 +16,7 @@ resource "aws_elb" "this" {
 }
 
 resource "aws_launch_template" "this" {
-  name_prefix = "${web_app}-web"
+  name_prefix = "${var.web_app}-web"
   image_id = var.web_image_id
   instance_type = var.web_instance_type
 #  vpc_security_group_ids = [aws_security_group.this.id]
